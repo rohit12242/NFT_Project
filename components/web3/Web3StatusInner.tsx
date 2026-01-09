@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import ReactGA from 'react-ga4';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import classNames from 'classnames';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import Jazzicon, { jsNumberForAddress } from 'react-jazzicon';
@@ -8,16 +8,24 @@ import { shortenAddress } from '@/utils';
 import { isBABTHolderAtom } from '@/store/web3/state';
 import { useBABTBalanceOf } from '@/hooks/useContract';
 import { gamerEmailInfoAtom } from '@/store/gamer/state';
+import { digitalFormat } from '@/utils/format';
 import Popover from '../popover';
 import { useLogoutCallback } from '@/hooks/user';
 
 function Web3StatusInner() {
   const { address, connector } = useAccount();
   const { data: balance } = useBABTBalanceOf({ address });
+  const { data: nativeBalance } = useBalance({ address });
   const gamerEmailInfo = useRecoilValue(gamerEmailInfoAtom);
   const setIsBABTHolder = useSetRecoilState(isBABTHolderAtom);
   const isBABTHolder = useMemo(() => !!(balance && balance.toString() !== '0'), [balance]);
   const logout = useLogoutCallback();
+
+  const formattedBalance = useMemo(() => {
+    if (!nativeBalance) return '0';
+    return digitalFormat.decimal(parseFloat(nativeBalance.formatted), 4);
+  }, [nativeBalance]);
+
 
   useEffect(() => {
     if (!address) return;
@@ -62,7 +70,12 @@ function Web3StatusInner() {
             isBABTHolder && 'overflow-hidden rounded-full bg-gradient-babt',
           )}
         >
-          <p className={classNames(isBABTHolder && 'font-medium text-black')}>{shortenAddress(address)}</p>
+          <div className="flex flex-col items-start gap-0.5">
+            <p className={classNames(isBABTHolder && 'font-medium text-black')}>{shortenAddress(address)}</p>
+            <p className={classNames('text-xs opacity-80', isBABTHolder && 'text-black/70')}>
+              {formattedBalance} {nativeBalance?.symbol}
+            </p>
+          </div>
           <div className="ml-3 h-6.5 w-6.5 overflow-hidden rounded-full border border-white bg-p12-gradient sm:hidden">
             {isBABTHolder ? (
               <img
